@@ -295,3 +295,90 @@ commandInput.addEventListener("keydown", function(event) {
 
 </body>
 </html>  
+let recognition;
+let wakeMode = false;
+let speaking = false;
+
+function startListening() {
+  const Speech =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  if (!Speech) {
+    reply("Voice recognition is not supported.");
+    return;
+  }
+
+  if (wakeMode) {
+    wakeMode = false;
+    recognition?.stop();
+    statusText.innerText = "SYSTEM ONLINE";
+    reply("Wake word mode disabled.");
+    return;
+  }
+
+  recognition = new Speech();
+  recognition.lang = "en-IN";
+  recognition.continuous = true;
+  recognition.interimResults = false;
+
+  wakeMode = true;
+  statusText.innerText = "LISTENING FOR JARVIS";
+
+  recognition.onresult = function(event) {
+    const result =
+      event.results[event.results.length - 1][0].transcript;
+
+    const text = result.toLowerCase().trim();
+
+    if (text.includes("hey jarvis")) {
+      const command = text.replace("hey jarvis", "").trim();
+
+      if (command) {
+        processCommand(command);
+      } else {
+        reply("Yes sir, I am listening.");
+      }
+    } else if (wakeMode) {
+      statusText.innerText = "SAY HEY JARVIS";
+    }
+  };
+
+  recognition.onend = function() {
+    if (wakeMode && !speaking) {
+      try {
+        recognition.start();
+      } catch (e) {}
+    }
+  };
+
+  recognition.onerror = function() {
+    statusText.innerText = "VOICE CONNECTION INTERRUPTED";
+  };
+
+  recognition.start();
+}
+
+function reply(message) {
+  responseBox.innerText = message;
+
+  speaking = true;
+  window.speechSynthesis.cancel();
+
+  const speech = new SpeechSynthesisUtterance(message);
+  speech.lang = "en-IN";
+  speech.pitch = 0.85;
+  speech.rate = 0.95;
+
+  speech.onend = function() {
+    speaking = false;
+
+    if (wakeMode) {
+      try {
+        recognition.start();
+      } catch (e) {}
+    }
+  };
+
+  window.speechSynthesis.speak(speech);
+}
