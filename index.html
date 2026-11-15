@@ -382,52 +382,77 @@ function reply(message) {
 </body>
 </html>
 Fix JARVIS voice code.
-<button id="micBtn">
+<button id="micButton">🎤 Activate JARVIS</button>
+<p id="status">JARVIS is ready.</p>
+<p id="heardText"></p>
+<script>
 const micButton = document.getElementById("micButton");
+const statusText = document.getElementById("status");
+const heardText = document.getElementById("heardText");
 
-if (micButton) {
+const SpeechRecognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+if (!micButton) {
+    alert("Microphone button not found!");
+} else if (!SpeechRecognition) {
+    statusText.textContent =
+        "Speech recognition is not supported. Try Chrome.";
+} else {
     micButton.addEventListener("click", () => {
-        const SpeechRecognition =
-            window.SpeechRecognition ||
-            window.webkitSpeechRecognition;
-
-        if (!SpeechRecognition) {
-            alert("Speech recognition is not supported. Please use Chrome.");
-            return;
-        }
-
         const recognition = new SpeechRecognition();
 
         recognition.lang = "en-IN";
         recognition.continuous = false;
         recognition.interimResults = false;
 
-        recognition.onstart = () => {
-            micButton.textContent = "🔴 Listening...";
-        };
+        statusText.textContent = "Listening...";
 
         recognition.onresult = (event) => {
             const command =
-                event.results[0][0].transcript;
+                event.results[0][0].transcript.toLowerCase();
 
-            alert("JARVIS heard: " + command);
+            heardText.textContent = "You said: " + command;
 
-            const speech = new SpeechSynthesisUtterance(
-                "I heard you. " + command
-            );
+            let reply = "Sorry, I did not understand.";
 
+            if (command.includes("hello")) {
+                reply = "Hello! I am JARVIS. How can I help you?";
+            } else if (command.includes("your name")) {
+                reply = "I am JARVIS, your personal assistant.";
+            } else if (command.includes("time")) {
+                reply = "The time is " +
+                    new Date().toLocaleTimeString("en-IN");
+            } else if (command.includes("date")) {
+                reply = "Today's date is " +
+                    new Date().toLocaleDateString("en-IN");
+            } else if (command.includes("thank")) {
+                reply = "You are welcome.";
+            }
+
+            statusText.textContent = "JARVIS: " + reply;
+
+            const speech = new SpeechSynthesisUtterance(reply);
             speech.lang = "en-IN";
+            speech.rate = 0.9;
+            speech.pitch = 0.8;
+
+            window.speechSynthesis.cancel();
             window.speechSynthesis.speak(speech);
         };
 
         recognition.onerror = (event) => {
-            alert("Microphone error: " + event.error);
+            statusText.textContent =
+                "Microphone error: " + event.error;
         };
 
         recognition.onend = () => {
-            micButton.textContent = "🎤";
+            micButton.textContent = "🎤 Activate JARVIS";
         };
 
+        micButton.textContent = "🔴 Listening...";
         recognition.start();
     });
 }
+</script>
