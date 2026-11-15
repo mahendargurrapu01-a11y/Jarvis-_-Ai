@@ -383,3 +383,51 @@ function reply(message) {
 </html>
 Fix JARVIS voice code.
 <button id="micBtn">
+const micButton = document.getElementById("micButton");
+
+if (micButton) {
+    micButton.addEventListener("click", () => {
+        const SpeechRecognition =
+            window.SpeechRecognition ||
+            window.webkitSpeechRecognition;
+
+        if (!SpeechRecognition) {
+            alert("Speech recognition is not supported. Please use Chrome.");
+            return;
+        }
+
+        const recognition = new SpeechRecognition();
+
+        recognition.lang = "en-IN";
+        recognition.continuous = false;
+        recognition.interimResults = false;
+
+        recognition.onstart = () => {
+            micButton.textContent = "🔴 Listening...";
+        };
+
+        recognition.onresult = (event) => {
+            const command =
+                event.results[0][0].transcript;
+
+            alert("JARVIS heard: " + command);
+
+            const speech = new SpeechSynthesisUtterance(
+                "I heard you. " + command
+            );
+
+            speech.lang = "en-IN";
+            window.speechSynthesis.speak(speech);
+        };
+
+        recognition.onerror = (event) => {
+            alert("Microphone error: " + event.error);
+        };
+
+        recognition.onend = () => {
+            micButton.textContent = "🎤";
+        };
+
+        recognition.start();
+    });
+}
