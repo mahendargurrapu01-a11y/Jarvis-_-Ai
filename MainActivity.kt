@@ -1,0 +1,121 @@
+package com.example.jarvis
+
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Bundle
+import android.provider.MediaStore
+import android.provider.Settings
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
+import android.webkit.WebView
+import android.webkit.WebViewClient
+import android.widget.Toast
+import java.util.Locale
+
+class MainActivity : Activity(), TextToSpeech.OnInitListener {
+    private lateinit var web: WebView
+    private var recognizer: SpeechRecognizer? = null
+    private var tts: TextToSpeech? = null
+    private var ttsReady = false
+    private val audioRequest = 41
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        tts = TextToSpeech(this, this)
+        web = WebView(this).apply {
+            settings.javaScriptEnabled = true
+            settings.domStorageEnabled = true
+            webChromeClient = WebChromeClient()
+            webViewClient = WebViewClient()
+            addJavascriptInterface(JarvisBridge(), "Android")
+            loadUrl("file:///android_asset/index.html")
+        }
+        setContentView(web)
+    }
+
+    override fun onInit(status: Int) {
+        if (status == TextToSpeech.SUCCESS) {
+            ttsReady = true
+            tts?.language = Locale("en", "IN")
+        }
+    }
+
+    inner class JarvisBridge {
+        @JavascriptInterface fun speak(text: String) { runOnUiThread { if (ttsReady) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "jarvis") } }
+        @JavascriptInterface fun stopSpeaking() { runOnUiThread { tts?.stop() } }
+        @JavascriptInterface fun listen() { runOnUiThread { startVoiceInput() } }
+        @JavascriptInterface fun action(action: String) { runOnUiThread { performAction(action) } }
+    }
+
+    private fun startVoiceInput() {
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO), audioRequest); return
+        }
+        if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+            sendJs("onVoiceError('Speech recognition is unavailable on this device.')"); return
+        }
+        recognizer?.destroy()
+        recognizer = SpeechRecognizer.createSpeechRecognizer(this).also { r ->
+            r.setRecognitionListener(object : RecognitionListener {
+                override fun onReadyForSpeech(params: Bundle?) { }
+                override fun onBeginningOfSpeech() { }
+                override fun onRmsChanged(rmsdB: Float) { }
+                override fun onBufferReceived(buffer: ByteArray?) { }
+                override fun onEndOfSpeech() { }
+                override fun onError(error: Int) { sendJs("onVoiceError('Voice input error. Please try again.')") }
+                override fun onResults(results: Bundle?) {
+                    val words = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                    val safe = org.json.JSONObject.quote(words)
+                    sendJs("onVoiceResult($safe)")
+                }
+                override fun onPartialResults(partialResults: Bundle?) { }
+                override fun onEvent(eventType: Int, params: Bundle?) { }
+            })
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "en-IN")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, "Speak a JARVIS command")
+            }
+            r.startListening(intent)
+        }
+    }
+
+    private fun sendJs(script: String) { runOnUiThread { if (::web.isInitialized) web.evaluateJavascript(script, null) } }
+
+    private fun performAction(action: String) {
+        try {
+            when {
+                action == "whatsapp" -> launchApp("com.whatsapp", "WhatsApp")
+                action == "youtube" -> launchApp("com.google.android.youtube", "YouTube")
+                action == "camera" -> startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE))
+                action == "settings" -> startActivity(Intent(Settings.ACTION_SETTINGS))
+                action == "google" -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com")))
+                action.startsWith("search:") -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.google.com/search?q=" + Uri.encode(action.removePrefix("search:")))))
+                action.startsWith("play:") -> startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com/results?search_query=" + Uri.encode(action.removePrefix("play:")))))
+                action.startsWith("call:") -> startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(action.removePrefix("call:")))))
+            }
+        } catch (_: Exception) { Toast.makeText(this, "Could not complete that action.", Toast.LENGTH_SHORT).show() }
+    }
+
+    private fun launchApp(packageName: String, label: String) {
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+        if (intent != null) startActivity(intent) else Toast.makeText(this, "$label is not installed.", Toast.LENGTH_SHORT).show()
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == audioRequest && grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) startVoiceInput()
+        else if (requestCode == audioRequest) sendJs("onVoiceError('Microphone permission was denied. Allow it in Android settings to use voice input.')")
+    }
+
+    override fun onDestroy() {
+        recognizer?.destroy(); tts?.stop(); tts?.shutdown(); if (::web.isInitialized) web.destroy(); super.onDestroy()
+    }
+}
