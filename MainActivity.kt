@@ -121,3 +121,4 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         recognizer?.destroy(); tts?.stop(); tts?.shutdown(); if (::web.isInitialized) web.destroy(); super.onDestroy()
     }
 }
+app/src/main/java/com/example/jarvis/MainActivity.kt
