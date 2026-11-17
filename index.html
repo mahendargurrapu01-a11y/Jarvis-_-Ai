@@ -1,12 +1,222 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#050b18"><title>J.A.R.V.I.S 2.0</title>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#061426">
+
+<title>JARVIS AI V2</title>
+
 <style>
-:root{--cyan:#39eaff;--blue:#168bff;--muted:#8caec7;--panel:rgba(9,27,49,.82)}*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 27%,#123c60 0,#07172b 38%,#030711 78%);color:#e8faff;font-family:system-ui,Arial,sans-serif;overflow-x:hidden}.grid{position:fixed;inset:0;pointer-events:none;opacity:.14;background-image:linear-gradient(#38dfff22 1px,transparent 1px),linear-gradient(90deg,#38dfff22 1px,transparent 1px);background-size:34px 34px;mask-image:linear-gradient(to bottom,black,transparent)}header{display:flex;justify-content:space-between;align-items:center;padding:18px 20px;border-bottom:1px solid #39eaff33;background:#06142699;letter-spacing:2px;font-size:12px;color:var(--muted)}.live{color:#66ffbb}.wrap{max-width:560px;margin:auto;padding:20px 18px 36px;text-align:center}h1{font-size:32px;letter-spacing:8px;margin:20px 0 4px;color:#e9fbff;text-shadow:0 0 18px #39eaff}.tag{font-size:10px;letter-spacing:3px;color:#78bad8}.reactor{width:220px;height:220px;margin:28px auto 18px;border-radius:50%;display:grid;place-items:center;position:relative;background:radial-gradient(circle,#baffff 0 3%,#35eaff 4% 8%,#0a6b9c 10% 16%,#061a31 18% 46%,transparent 48%);box-shadow:0 0 24px #21dfff, inset 0 0 24px #20dfff55;animation:pulse 2.8s ease-in-out infinite}.reactor:before,.reactor:after{content:"";position:absolute;inset:5px;border:2px solid #35eaff;border-radius:50%;clip-path:polygon(0 0,100% 0,100% 35%,0 35%);animation:spin 9s linear infinite}.reactor:after{inset:20px;border-color:#8af6ff88;clip-path:none;border-style:dashed;animation:spin 15s linear infinite reverse}.core{font-size:48px;color:#eaffff;text-shadow:0 0 22px #39eaff}.status{font-size:12px;letter-spacing:2px;color:#9deaff;margin:12px}.card{background:var(--panel);border:1px solid #39eaff55;border-radius:18px;padding:17px;margin:18px 0;box-shadow:0 8px 30px #0006,inset 0 0 24px #0b5b7a22;text-align:left}.label{font-size:10px;letter-spacing:2px;color:#6dbbd5;margin-bottom:9px}.response{min-height:48px;line-height:1.5;color:#eafaff}.row{display:flex;gap:9px;margin:12px 0}.command{flex:1;min-width:0;border:1px solid #3adcf077;border-radius:13px;background:#061426;color:white;padding:14px;font-size:15px;outline:none}.btn{border:1px solid var(--cyan);border-radius:13px;background:linear-gradient(135deg,#0b3854,#09243c);color:#bffaff;padding:13px 17px;font-weight:700;letter-spacing:1px;box-shadow:0 0 13px #12cfff33}.btn:active{background:#12648a}.mic{width:100%;padding:16px;border-radius:30px;font-size:14px}.quick{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.quick .btn{font-size:11px}.history{font-size:12px;color:#a9c8d8;line-height:1.7;max-height:90px;overflow:auto}.foot{font-size:9px;letter-spacing:2px;color:#527d97;margin-top:26px}@keyframes pulse{50%{box-shadow:0 0 42px #21dfff,inset 0 0 38px #20dfff88;transform:scale(1.025)}}@keyframes spin{to{transform:rotate(360deg)}}
-</style></head><body><div class="grid"></div><header><span>STARK INDUSTRIES // AI</span><span class="live">● SYSTEM ONLINE</span></header><main class="wrap"><h1>J.A.R.V.I.S</h1><div class="tag">JUST A RATHER VERY INTELLIGENT SYSTEM</div><div class="reactor"><div class="core">◈</div></div><div class="status" id="status">READY FOR YOUR COMMAND</div>
-<button class="btn mic" onclick="listen()">🎙 ACTIVATE JARVIS</button>
-<div class="card"><div class="label">COMMAND CONSOLE</div><div class="row"><input id="command" class="command" placeholder="Try: open YouTube" autocomplete="off"><button class="btn" onclick="send()">SEND</button></div><div class="label">JARVIS RESPONSE</div><div class="response" id="response">Hello. JARVIS systems are online. How may I assist?</div></div>
-<div class="card"><div class="label">QUICK ACTIONS</div><div class="quick"><button class="btn" onclick="run('open WhatsApp')">WHATSAPP</button><button class="btn" onclick="run('open YouTube')">YOUTUBE</button><button class="btn" onclick="run('open camera')">CAMERA</button><button class="btn" onclick="run('open settings')">SETTINGS</button></div></div>
-<div class="card"><div class="label">RECENT ACTIVITY</div><div class="history" id="history">No commands yet.</div></div><div class="foot">J.A.R.V.I.S 2.0 // ANDROID EDITION</div></main>
-<script>
-const $=id=>document.getElementById(id);function say(t){$('response').textContent=t; $('status').textContent='JARVIS RESPONDING';if(window.Android&&Android.speak)Android.speak(t);else if('speechSynthesis'in window){speechSynthesis.cancel();let u=new SpeechSynthesisUtterance(t);u.lang='en-IN';speechSynthesis.speak(u)}addHistory('JARVIS: '+t)}function addHistory(t){let h=$('history');if(h.textContent==='No commands yet.')h.textContent='';h.textContent=t+'\n'+h.textContent}function run(c){let t=c.toLowerCase().trim();addHistory('YOU: '+c);if(t.includes('hello')||t.includes('hey jarvis'))say('Hello. All systems are operational.');else if(t.includes('your name')||t.includes('who are you'))say('I am JARVIS, your personal Android assistant.');else if(t.includes('time'))say('The current time is '+new Date().toLocaleTimeString('en-IN'));else if(t.includes('date')||t.includes('today'))say('Today is '+new Date().toLocaleDateString('en-IN'));else if(t.includes('open whatsapp'))native('whatsapp');else if(t.includes('open youtube'))native('youtube');else if(t.includes('open camera'))native('camera');else if(t.includes('open settings'))native('settings');else if(t.includes('open google'))native('google');else if(t.startsWith('search ')){let q=t.slice(7).trim();if(q){say('Searching Google for '+q);native('search:'+q)}else say('Tell me what to search for.')}else if(t.startsWith('play ')){let q=t.slice(5).trim();say('Searching YouTube for '+q);native('play:'+q)}else if(t.startsWith('call ')){let n=t.slice(5).trim();say('Opening the dialer. Please review and confirm the call.');native('call:'+n)}else if(t==='stop'){if(window.Android)Android.stopSpeaking();else speechSynthesis.cancel();$('status').textContent='READY';$('response').textContent='Voice output stopped.'}else say('I do not know that command yet. Try open YouTube, open WhatsApp, or search space facts.')}function native(a){if(window.Android&&Android.action)Android.action(a);else say('This action needs the Android app version.')}function send(){let v=$('command').value.trim();if(v)run(v);$('command').value=''}function listen(){if(window.Android&&Android.listen){$('status').textContent='LISTENING...';Android.listen()}else say('Voice input is available in the Android app.')}function onVoiceResult(t){$('command').value=t;$('status').textContent='COMMAND RECEIVED';run(t)}function onVoiceError(t){$('status').textContent='VOICE INPUT ERROR';say(t)}$('command').addEventListener('keydown',e=>{if(e.key==='Enter')send()});setInterval(()=>{if($('status').textContent==='READY FOR YOUR COMMAND')$('status').textContent='SYSTEM ONLINE // '+new Date().toLocaleTimeString('en-IN')},1000);
-</script></body></html>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: radial-gradient(circle, #123c60, #030711);
+    color: #e8faff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+header {
+    padding: 20px;
+    color: #39eaff;
+    letter-spacing: 3px;
+}
+
+.container {
+    max-width: 550px;
+    margin: auto;
+    padding: 20px;
+}
+
+h1 {
+    font-size: 38px;
+    letter-spacing: 8px;
+    text-shadow: 0 0 20px cyan;
+}
+
+.reactor {
+    width: 190px;
+    height: 190px;
+    border: 4px solid cyan;
+    border-radius: 50%;
+    margin: 30px auto;
+    display: grid;
+    place-items: center;
+    font-size: 65px;
+    color: cyan;
+    box-shadow: 0 0 35px cyan;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    50% {
+        box-shadow: 0 0 65px cyan;
+    }
+}
+
+.status {
+    color: #39eaff;
+    margin: 20px;
+}
+
+button {
+    background: #082c49;
+    border: 1px solid cyan;
+    color: white;
+    padding: 15px;
+    border-radius: 12px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+.mic {
+    width: 100%;
+    border-radius: 30px;
+    font-size: 17px;
+}
+
+.card {
+    background: #071c30;
+    border: 1px solid #168bff;
+    border-radius: 15px;
+    padding: 18px;
+    margin: 20px 0;
+}
+
+input, select {
+    background: #061426;
+    color: white;
+    border: 1px solid cyan;
+    padding: 14px;
+    border-radius: 10px;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.response {
+    min-height: 50px;
+    line-height: 1.6;
+}
+
+.quick {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+.quick button {
+    width: 95%;
+}
+
+#history {
+    text-align: left;
+    font-size: 13px;
+    line-height: 1.8;
+    overflow-wrap: anywhere;
+}
+</style>
+</head>
+
+<body>
+
+<header>STARK INDUSTRIES | AI SYSTEM</header>
+
+<div class="container">
+
+<h1>J.A.R.V.I.S</h1>
+
+<p>JUST A RATHER VERY INTELLIGENT SYSTEM</p>
+
+<div class="reactor">◈</div>
+
+<div class="status" id="status">
+SYSTEM ONLINE
+</div>
+
+<div class="card">
+
+<h3>LANGUAGE / భాష</h3>
+
+<select id="language" onchange="changeLanguage()">
+<option value="en">English</option>
+<option value="te">తెలుగు (Telugu)</option>
+</select>
+
+</div>
+
+<button class="mic" onclick="listen()">
+🎙 ACTIVATE JARVIS
+</button>
+
+<div class="card">
+
+<h3>COMMAND CENTER</h3>
+
+<input
+id="command"
+type="text"
+placeholder="Speak or type a command"
+/>
+
+<button onclick="send()">SEND COMMAND</button>
+
+<h3>JARVIS RESPONSE</h3>
+
+<div class="response" id="response">
+Hello! JARVIS is ready.
+</div>
+
+</div>
+
+<div class="card">
+
+<h3>QUICK ACTIONS</h3>
+
+<div class="quick">
+
+<button onclick="run('open whatsapp')">
+WHATSAPP
+</button>
+
+<button onclick="run('open youtube')">
+YOUTUBE
+</button>
+
+<button onclick="run('open camera')">
+CAMERA
+</button>
+
+<button onclick="run('open settings')">
+SETTINGS
+</button>
+
+<button onclick="run('open google')">
+GOOGLE
+</button>
+
+<button onclick="run('time')">
+TIME
+</button>
+
+</div>
+</div>
+
+<div class="card">
+
+<h3>ACTIVITY HISTORY</h3>
+
+<div id="history">No activity yet.</div>
+
+</div>
+
+<p>JARVIS AI V2 | ANDROID EDITION</p>
+
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
