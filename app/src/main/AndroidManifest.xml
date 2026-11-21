@@ -1,16 +1,37 @@
-
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <queries>
         <package android:name="com.whatsapp" />
         <package android:name="com.google.android.youtube" />
-        <intent><action android:name="android.speech.RecognitionService" /></intent>
-        <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
+
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
     </queries>
-    <application android:allowBackup="false" android:label="JARVIS 2.0" android:theme="@android:style/Theme.Material.Light.NoActionBar" android:supportsRtl="true">
-        <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+
+    <application
+        android:allowBackup="false"
+        android:label="JARVIS 2.0"
+        android:theme="@android:style/Theme.Material.Light">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
         </activity>
     </application>
-</manifest>
 
+</manifest>
