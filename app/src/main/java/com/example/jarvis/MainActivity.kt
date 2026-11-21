@@ -1,51 +1,48 @@
 package com.example.jarvis
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
-import android.provider.MediaStore
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
-import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.webkit.WebChromeClient
+import android.webkit.JavascriptInterface
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import java.util.Locale
 
-class MainActivity : Activity() {
+class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
     private var tts: TextToSpeech? = null
 
-    private val speechRequest = 100
-    private val permissionRequest = 101
+    private val speechRequest = 1001
+    private val permissionRequest = 1002
 
-    @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        webView = WebView(this)
+        setContentView(webView)
 
         tts = TextToSpeech(this) {
             tts?.language = Locale("en", "IN")
         }
 
-        webView = WebView(this)
-
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
-        webView.settings.allowFileAccess = true
+        webView.webViewClient = WebViewClient()
+        webView.webChromeClient = WebChromeClient()
 
         webView.addJavascriptInterface(
             JarvisBridge(),
             "Android"
         )
-
-        webView.webViewClient = WebViewClient()
-
-        setContentView(webView)
 
         webView.loadUrl("file:///android_asset/index.html")
     }
@@ -53,35 +50,28 @@ class MainActivity : Activity() {
     inner class JarvisBridge {
 
         @JavascriptInterface
-        fun speak(message: String) {
-            runOnUiThread {
-                tts?.speak(
-                    message,
-                    TextToSpeech.QUEUE_FLUSH,
-                    null,
-                    "jarvis"
-                )
-            }
-        }
-
-        @JavascriptInterface
-        fun stopSpeaking() {
-            runOnUiThread {
-                tts?.stop()
-            }
-        }
-
-        @JavascriptInterface
-        fun listen() {
+        fun startVoice() {
             runOnUiThread {
                 startListening()
             }
         }
 
         @JavascriptInterface
-        fun action(command: String) {
+        fun speak(text: String) {
             runOnUiThread {
-                executeCommand(command)
+                tts?.speak(
+                    text,
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "JARVIS"
+                )
+            }
+        }
+
+        @JavascriptInterface
+        fun execute(command: String) {
+            runOnUiThread {
+                executeCommand(command.lowercase().trim())
             }
         }
     }
@@ -114,14 +104,27 @@ class MainActivity : Activity() {
             )
 
             intent.putExtra(
+                RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE,
+                "en-IN"
+            )
+
+            intent.putExtra(
+                RecognizerIntent.EXTRA_MAX_RESULTS,
+                1
+            )
+
+            intent.putExtra(
                 RecognizerIntent.EXTRA_PROMPT,
                 "Speak to JARVIS"
             )
 
-            startActivityForResult(intent, speechRequest)
+            startActivityForResult(
+                intent,
+                speechRequest
+            )
 
         } catch (e: Exception) {
-            showMessage("Voice recognition unavailable")
+            showMessage("Speech recognition unavailable")
         }
     }
 
@@ -140,22 +143,22 @@ class MainActivity : Activity() {
                 command == "google" ->
                     openApp("com.google.android.googlequicksearchbox")
 
-                command == "camera" -> {
+                command == "camera" ->
                     startActivity(
-                        Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                        Intent("android.media.action.IMAGE_CAPTURE")
                     )
-                }
 
-                command == "settings" -> {
+                command == "settings" ->
                     startActivity(
                         Intent(android.provider.Settings.ACTION_SETTINGS)
                     )
-                }
 
                 command.startsWith("search:") -> {
-                    val query = command.removePrefix("search:")
-                    val url = "https://www.google.com/search?q=" +
-                            Uri.encode(query)
+                    val query = command.removePrefix("search:").trim()
+
+                    val url =
+                        "https://www.google.com/search?q=" +
+                        Uri.encode(query)
 
                     startActivity(
                         Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -163,10 +166,11 @@ class MainActivity : Activity() {
                 }
 
                 command.startsWith("play:") -> {
-                    val query = command.removePrefix("play:")
+                    val query = command.removePrefix("play:").trim()
 
-                    val url = "https://www.youtube.com/results?search_query=" +
-                            Uri.encode(query)
+                    val url =
+                        "https://www.youtube.com/results?search_query=" +
+                        Uri.encode(query)
 
                     startActivity(
                         Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -174,7 +178,7 @@ class MainActivity : Activity() {
                 }
 
                 command.startsWith("call:") -> {
-                    val number = command.removePrefix("call:")
+                    val number = command.removePrefix("call:").trim()
 
                     startActivity(
                         Intent(
@@ -184,11 +188,12 @@ class MainActivity : Activity() {
                     )
                 }
 
-                else -> showMessage("Command not supported")
+                else ->
+                    showMessage("Command not supported")
             }
 
         } catch (e: Exception) {
-            showMessage("Unable to perform this action")
+            showMessage("Unable to perform action")
         }
     }
 
@@ -236,10 +241,14 @@ class MainActivity : Activity() {
         resultCode: Int,
         data: Intent?
     ) {
-        super.onActivityResult(requestCode, resultCode, data)
+        super.onActivityResult(
+            requestCode,
+            resultCode,
+            data
+        )
 
         if (requestCode == speechRequest &&
-            resultCode == RESULT_OK
+            resultCode == Activity.RESULT_OK
         ) {
 
             val results = data?.getStringArrayListExtra(
@@ -250,22 +259,14 @@ class MainActivity : Activity() {
 
             if (spokenText != null) {
 
-                val safeText = org.json.JSONObject.quote(spokenText)
+                val safeText =
+                    org.json.JSONObject.quote(spokenText)
 
                 webView.evaluateJavascript(
                     "onVoiceResult($safeText)",
                     null
                 )
             }
-        }
-    }
-
-    @Deprecated("Deprecated by Android")
-    override fun onBackPressed() {
-        if (::webView.isInitialized && webView.canGoBack()) {
-            webView.goBack()
-        } else {
-            super.onBackPressed()
         }
     }
 
@@ -276,3 +277,6 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 }
+        
+
+            
