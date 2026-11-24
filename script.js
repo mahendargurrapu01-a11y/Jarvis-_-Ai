@@ -205,9 +205,14 @@ function run(command) {
     // HELLO
 
     if (
-        c.includes("hello") ||
-        c.includes("హలో") ||
-        c.includes("నమస్కారం")
+        if (
+    c === "hello" ||
+    c === "hi" ||
+    c === "హలో" ||
+    c === "నమస్కారం"
+)
+    
+
     ) {
 
         say(
