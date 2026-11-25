@@ -67,7 +67,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 startListening()
             }
         }
-    }
+       @JavascriptInterface
+    fun sendCommand(command: String) {
+        runOnUiThread {
+            this@MainActivity.sendCommand(command)
+        }
+     }
 
     private fun startListening() {
 
