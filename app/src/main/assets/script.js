@@ -82,3 +82,15 @@ function changeLanguage() {
         Android.speak("English language selected");
     }
 }
+function listen() {
+    if (window.Android &&
+        typeof Android.listen === "function") {
+
+        document.getElementById("status").innerText =
+            "LISTENING...";
+
+        Android.listen();
+
+    } else {
+        speak("Microphone is not available.");
+    }
