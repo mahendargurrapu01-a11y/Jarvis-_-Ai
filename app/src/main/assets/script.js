@@ -1,41 +1,65 @@
 function speak(text) {
-    if ("speechSynthesis" in window) {
-        speechSynthesis.cancel();
-        const message = new SpeechSynthesisUtterance(text);
-        message.lang = "en-US";
-        speechSynthesis.speak(message);
+    document.getElementById("response").innerText = text;
+
+    if (window.Android) {
+        Android.speak(text);
     }
 }
 
 function sendCommand(command) {
     const text = command.toLowerCase().trim();
+    let reply = "";
 
     if (text.includes("hello")) {
-        speak("Hello sir. JARVIS is online.");
-    } else if (text.includes("who are you")) {
-        speak("I am JARVIS, your virtual assistant.");
-    } else if (text.includes("time")) {
-        speak("The time is " + new Date().toLocaleTimeString());
-    } else if (text.includes("date")) {
-        speak("Today is " + new Date().toDateString());
-    } else if (text.includes("open youtube")) {
-        window.open("https://www.youtube.com", "_blank");
-        speak("Opening YouTube.");
-    } else if (text.includes("open google")) {
-        window.open("https://www.google.com", "_blank");
-        speak("Opening Google.");
-    } else if (text.startsWith("search ")) {
-        const query = text.replace("search ", "");
-        window.open("https://www.google.com/search?q=" + encodeURIComponent(query), "_blank");
-        speak("Searching Google.");
-    } else {
-        speak("Sorry sir. I don't understand that command yet.");
+        reply = "Hello sir. JARVIS is online.";
     }
+    else if (text.includes("who are you")) {
+        reply = "I am JARVIS, your personal AI assistant.";
+    }
+    else if (text.includes("time")) {
+        reply = "The time is " + new Date().toLocaleTimeString();
+    }
+    else if (text.includes("date")) {
+        reply = "Today is " + new Date().toDateString();
+    }
+    else if (text.includes("open whatsapp")) {
+        reply = "Opening WhatsApp.";
+        Android.action("whatsapp");
+    }
+    else if (text.includes("open youtube")) {
+        reply = "Opening YouTube.";
+        Android.action("youtube");
+    }
+    else if (text.includes("open google")) {
+        reply = "Opening Google.";
+        Android.action("google");
+    }
+    else if (text.includes("open camera")) {
+        reply = "Opening camera.";
+        Android.action("camera");
+    }
+    else if (text.includes("open settings")) {
+        reply = "Opening settings.";
+        Android.action("settings");
+    }
+    else if (text.startsWith("search ")) {
+        reply = "Searching Google.";
+        Android.action("search:" + text.replace("search ", ""));
+    }
+    else {
+        reply = "Sorry sir. I don't understand that command.";
+    }
+
+    speak(reply);
+
+    document.getElementById("history").innerText =
+        text + " → " + reply;
 }
 
 function send() {
     const input = document.getElementById("command");
-    if (input && input.value.trim()) {
+
+    if (input.value.trim()) {
         sendCommand(input.value);
         input.value = "";
     }
@@ -43,4 +67,18 @@ function send() {
 
 function run(command) {
     sendCommand(command);
+}
+
+function onVoiceResult(text) {
+    sendCommand(text);
+}
+
+function changeLanguage() {
+    const language = document.getElementById("language").value;
+
+    if (language === "te") {
+        Android.speak("తెలుగు భాష ఎంపిక చేయబడింది");
+    } else {
+        Android.speak("English language selected");
+    }
 }
