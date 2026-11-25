@@ -1,5 +1,5 @@
 
-      package com.example.jarvis
+package com.example.jarvis
 
 import android.Manifest
 import android.app.Activity
@@ -10,13 +10,13 @@ import android.os.Bundle
 import android.provider.MediaStore
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
+import android.webkit.JavascriptInterface
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
-import android.webkit.WebChromeClient
-import android.webkit.JavascriptInterface
 import android.widget.Toast
-import java.util.Locale
 import org.json.JSONObject
+import java.util.Locale
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
@@ -34,7 +34,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         tts = TextToSpeech(this, this)
 
         webView = WebView(this)
-
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
 
@@ -48,6 +47,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         webView.loadUrl("file:///android_asset/index.html")
     }
 
+    // JavaScript connection
     inner class JarvisBridge {
 
         @JavascriptInterface
@@ -63,7 +63,21 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         @JavascriptInterface
+        fun stopSpeaking() {
+            runOnUiThread {
+                tts?.stop()
+            }
+        }
+
+        @JavascriptInterface
         fun listen() {
+            runOnUiThread {
+                startListening()
+            }
+        }
+
+        @JavascriptInterface
+        fun startVoice() {
             runOnUiThread {
                 startListening()
             }
@@ -75,8 +89,23 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 this@MainActivity.sendCommand(command)
             }
         }
+
+        @JavascriptInterface
+        fun action(command: String) {
+            runOnUiThread {
+                this@MainActivity.sendCommand(command)
+            }
+        }
+
+        @JavascriptInterface
+        fun execute(command: String) {
+            runOnUiThread {
+                this@MainActivity.sendCommand(command)
+            }
+        }
     }
 
+    // Voice recognition
     private fun startListening() {
 
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
@@ -110,43 +139,67 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             startActivityForResult(intent, REQUEST_SPEECH)
 
         } catch (e: Exception) {
-            toast("Voice recognition unavailable")
+            toast("Speech recognition unavailable")
         }
     }
 
+    // Process commands
     private fun sendCommand(command: String) {
 
-        val cmd = command.trim().lowercase(Locale.ROOT)
+        val cmd = command.trim()
+        val lower = cmd.lowercase(Locale.ROOT)
+
+        if (cmd.isEmpty()) return
 
         try {
             when {
 
-                cmd == "youtube:" || cmd == "open:youtube" -> {
-                    openYouTube("")
+                lower.startsWith("youtube:") -> {
+                    val query = cmd.substringAfter(":").trim()
+
+                    if (query.isEmpty()) {
+                        launchInstalledApp("YouTube")
+                    } else {
+                        openUrl(
+                            "https://www.youtube.com/results?search_query=" +
+                                Uri.encode(query)
+                        )
+                    }
                 }
 
-                cmd.startsWith("youtube:") -> {
-                    openYouTube(command.substringAfter(":").trim())
+                lower.startsWith("google:") -> {
+                    val query = cmd.substringAfter(":").trim()
+
+                    if (query.isEmpty()) {
+                        openUrl("https://www.google.com")
+                    } else {
+                        openUrl(
+                            "https://www.google.com/search?q=" +
+                                Uri.encode(query)
+                        )
+                    }
                 }
 
-                cmd == "google:" || cmd == "open:google" -> {
-                    openGoogle("")
+                lower.startsWith("play:") -> {
+                    val query = cmd.substringAfter(":").trim()
+
+                    openUrl(
+                        "https://www.youtube.com/results?search_query=" +
+                            Uri.encode(query)
+                    )
                 }
 
-                cmd.startsWith("google:") -> {
-                    openGoogle(command.substringAfter(":").trim())
+                lower.startsWith("search:") -> {
+                    val query = cmd.substringAfter(":").trim()
+
+                    openUrl(
+                        "https://www.google.com/search?q=" +
+                            Uri.encode(query)
+                    )
                 }
 
-                cmd.startsWith("play:") -> {
-                    openYouTube(command.substringAfter(":").trim())
-                }
-
-                cmd.startsWith("search:") -> {
-                    openGoogle(command.substringAfter(":").trim())
-                }
-
-                cmd.startsWith("call:") -> {
-                    val number = command.substringAfter(":").trim()
+                lower.startsWith("call:") -> {
+                    val number = cmd.substringAfter(":").trim()
 
                     startActivity(
                         Intent(
@@ -156,25 +209,31 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     )
                 }
 
-                cmd == "open:whatsapp" -> {
-                    openApp("com.whatsapp")
+                lower.startsWith("app:") -> {
+                    val appName = cmd.substringAfter(":").trim()
+                    launchInstalledApp(appName)
                 }
 
-                cmd == "open:camera" -> {
-                    startActivity(
-                        Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                    )
-                }
+                lower.startsWith("open:") -> {
+                    val appName = cmd.substringAfter(":").trim()
 
-                cmd == "open:settings" -> {
-                    startActivity(
-                        Intent(android.provider.Settings.ACTION_SETTINGS)
-                    )
-                }
+                    when (appName.lowercase(Locale.ROOT)) {
+                        "camera" -> {
+                            startActivity(
+                                Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                            )
+                        }
 
-                cmd.startsWith("open:") -> {
-                    val site = command.substringAfter(":").trim()
-                    openUrl(site)
+                        "settings" -> {
+                            startActivity(
+                                Intent(android.provider.Settings.ACTION_SETTINGS)
+                            )
+                        }
+
+                        else -> {
+                            launchInstalledApp(appName)
+                        }
+                    }
                 }
 
                 else -> {
@@ -183,77 +242,83 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
 
         } catch (e: Exception) {
-            toast("Could not perform this action")
+            toast("Could not complete action")
         }
     }
 
-    private fun openYouTube(query: String) {
+    // Find and open installed apps
+    private fun launchInstalledApp(appName: String) {
 
-        if (query.isBlank()) {
-            openAppOrUrl(
-                "com.google.android.youtube",
-                "https://www.youtube.com"
+        try {
+            val searchName = appName.trim().lowercase(Locale.ROOT)
+
+            if (searchName.isEmpty()) return
+
+            val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+            }
+
+            val installedApps = packageManager.queryIntentActivities(
+                launcherIntent,
+                0
             )
-        } else {
-            openUrl(
-                "https://www.youtube.com/results?search_query=" +
-                    Uri.encode(query)
+
+            val matchingApps = installedApps.mapNotNull { info ->
+
+                val label = info.loadLabel(packageManager).toString()
+
+                Triple(
+                    label,
+                    info.activityInfo.packageName,
+                    info.activityInfo.name
+                )
+            }
+
+            val selectedApp = matchingApps.firstOrNull {
+                it.first.lowercase(Locale.ROOT) == searchName
+            } ?: matchingApps.firstOrNull {
+                it.first.lowercase(Locale.ROOT).startsWith(searchName)
+            } ?: matchingApps.firstOrNull {
+                it.first.lowercase(Locale.ROOT).contains(searchName)
+            }
+
+            if (selectedApp == null) {
+                toast("$appName is not installed")
+                return
+            }
+
+            val launchIntent = packageManager.getLaunchIntentForPackage(
+                selectedApp.second
             )
+
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                startActivity(launchIntent)
+            } else {
+                toast("Cannot open $appName")
+            }
+
+        } catch (e: Exception) {
+            toast("App opening failed")
         }
     }
 
-    private fun openGoogle(query: String) {
-
-        val url = if (query.isBlank()) {
-            "https://www.google.com"
-        } else {
-            "https://www.google.com/search?q=" + Uri.encode(query)
-        }
-
-        openUrl(url)
-    }
-
-    private fun openApp(packageName: String) {
-
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-
-        if (intent != null) {
-            startActivity(intent)
-        } else {
-            toast("App is not installed")
-        }
-    }
-
-    private fun openAppOrUrl(packageName: String, url: String) {
-
-        val intent = packageManager.getLaunchIntentForPackage(packageName)
-
-        if (intent != null) {
-            startActivity(intent)
-        } else {
-            openUrl(url)
-        }
-    }
-
+    // Open external websites
     private fun openUrl(url: String) {
-
-        val finalUrl = if (
-            url.startsWith("https://") || url.startsWith("http://")
-        ) {
-            url
-        } else {
-            "https://$url"
-        }
-
         startActivity(
-            Intent(Intent.ACTION_VIEW, Uri.parse(finalUrl))
+            Intent(Intent.ACTION_VIEW, Uri.parse(url))
         )
     }
 
     private fun toast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            this,
+            message,
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
+    // Voice result
     @Deprecated("Deprecated Android callback")
     override fun onActivityResult(
         requestCode: Int,
@@ -268,18 +333,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 RecognizerIntent.EXTRA_RESULTS
             )
 
-            val text = results?.firstOrNull() ?: return
+            val spokenText = results?.firstOrNull() ?: return
 
-            val safeText = JSONObject.quote(text)
+            val safeText = JSONObject.quote(spokenText)
 
             webView.evaluateJavascript(
-                "if(typeof onVoiceResult === 'function') " +
-                    "onVoiceResult($safeText);",
+                "if(typeof onVoiceResult === 'function') onVoiceResult($safeText);",
                 null
             )
         }
     }
 
+    // Microphone permission
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<out String>,
@@ -303,6 +368,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
+    // Text to speech
     override fun onInit(status: Int) {
 
         if (status == TextToSpeech.SUCCESS) {
@@ -311,7 +377,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
-
         tts?.stop()
         tts?.shutdown()
 
@@ -321,7 +386,4 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         super.onDestroy()
     }
-}              
-
-            
-            
+}
