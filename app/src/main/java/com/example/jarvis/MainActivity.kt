@@ -13,6 +13,7 @@ import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
 import android.webkit.JavascriptInterface
 import android.widget.Toast
+import android.content.Context
 import java.util.Locale
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
@@ -29,7 +30,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         tts = TextToSpeech(this, this)
 
         webView = WebView(this)
-        setContentView(webView)
 
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
@@ -37,52 +37,34 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
 
-        webView.addJavascriptInterface(Bridge(), "Android")
+        webView.addJavascriptInterface(
+            JarvisBridge(this),
+            "Android"
+        )
+
+        setContentView(webView)
 
         webView.loadUrl("file:///android_asset/index.html")
     }
 
-    inner class Bridge {
+    inner class JarvisBridge(private val context: Context) {
+
+        @JavascriptInterface
+        fun speak(text: String) {
+            runOnUiThread {
+                tts?.speak(
+                    text,
+                    TextToSpeech.QUEUE_FLUSH,
+                    null,
+                    "JARVIS"
+                )
+            }
+        }
 
         @JavascriptInterface
         fun listen() {
             runOnUiThread {
                 startListening()
-            }
-        }
-
-        @JavascriptInterface
-        fun startVoice() {
-            runOnUiThread {
-                startListening()
-            }
-        }
-
-        @JavascriptInterface
-        fun speak(text: String) {
-            runOnUiThread {
-                speakText(text)
-            }
-        }
-
-        @JavascriptInterface
-        fun action(command: String) {
-            runOnUiThread {
-                executeCommand(command)
-            }
-        }
-
-        @JavascriptInterface
-        fun execute(command: String) {
-            runOnUiThread {
-                executeCommand(command)
-            }
-        }
-
-        @JavascriptInterface
-        fun stopSpeaking() {
-            runOnUiThread {
-                tts?.stop()
             }
         }
     }
@@ -116,66 +98,26 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             intent.putExtra(
                 RecognizerIntent.EXTRA_PROMPT,
-                "Speak to Jarvis"
+                "Speak to JARVIS"
             )
 
             startActivityForResult(intent, REQUEST_SPEECH)
 
         } catch (e: Exception) {
-            toast("Voice recognition unavailable")
+            toast("Speech recognition unavailable")
         }
     }
 
-    private fun speakText(text: String) {
-        tts?.speak(
-            text,
-            TextToSpeech.QUEUE_FLUSH,
-            null,
-            "JARVIS"
-        )
-    }
-
-    private fun executeCommand(command: String) {
+    private fun sendCommand(command: String) {
 
         val cmd = command.trim().lowercase(Locale.ROOT)
 
         try {
             when {
 
-                cmd.contains("youtube") -> {
-                    openUrl("https://www.youtube.com")
-                }
-
-                cmd.contains("instagram") -> {
-                    openUrl("https://www.instagram.com")
-                }
-
-                cmd.contains("google") -> {
-                    openUrl("https://www.google.com")
-                }
-
-                cmd.contains("camera") -> {
-                    startActivity(
-                        Intent("android.media.action.IMAGE_CAPTURE")
-                    )
-                }
-
-                cmd.contains("settings") -> {
-                    startActivity(
-                        Intent(android.provider.Settings.ACTION_SETTINGS)
-                    )
-                }
-
-                cmd.startsWith("search:") -> {
+                cmd.startsWith("youtube:") -> {
                     val query = command.substringAfter(":").trim()
-                    openUrl(
-                        "https://www.google.com/search?q=" +
-                            Uri.encode(query)
-                    )
-                }
 
-                cmd.startsWith("play:") -> {
-                    val query = command.substringAfter(":").trim()
                     openUrl(
                         "https://www.youtube.com/results?search_query=" +
                             Uri.encode(query)
@@ -190,6 +132,24 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                             Intent.ACTION_DIAL,
                             Uri.parse("tel:$number")
                         )
+                    )
+                }
+
+                cmd.startsWith("google:") -> {
+                    val query = command.substringAfter(":").trim()
+
+                    openUrl(
+                        "https://www.google.com/search?q=" +
+                            Uri.encode(query)
+                    )
+                }
+
+                cmd.startsWith("open:") -> {
+                    val site = command.substringAfter(":").trim()
+
+                    openUrl(
+                        if (site.startsWith("http")) site
+                        else "https://$site"
                     )
                 }
 
@@ -223,11 +183,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         resultCode: Int,
         data: Intent?
     ) {
-        super.onActivityResult(
-            requestCode,
-            resultCode,
-            data
-        )
+        super.onActivityResult(requestCode, resultCode, data)
 
         if (requestCode == REQUEST_SPEECH &&
             resultCode == RESULT_OK
@@ -285,11 +241,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     override fun onDestroy() {
         tts?.stop()
         tts?.shutdown()
-        webView.destroy()
+
+        if (::webView.isInitialized) {
+            webView.destroy()
+        }
+
         super.onDestroy()
     }
-} 
-
-  
-
-            
+}
