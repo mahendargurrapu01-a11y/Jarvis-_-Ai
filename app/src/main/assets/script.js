@@ -1,20 +1,12 @@
-
-// ==============================
-// JARVIS AI - FIXED SCRIPT.JS
-// ==============================
-
 const API_URL = "https://jarvis-ai-1-vfsw.onrender.com/api/chat";
 
 function $(id) {
     return document.getElementById(id);
 }
 
-function showResponse(text) {
+function show(text) {
     const response = $("response");
-
-    if (response) {
-        response.textContent = text;
-    }
+    if (response) response.textContent = text;
 }
 
 function addMessage(text, sender) {
@@ -26,39 +18,33 @@ function addMessage(text, sender) {
         }
 
         const item = document.createElement("div");
-        item.textContent = sender.toUpperCase() + ": " + text;
+        item.textContent = sender + ": " + text;
         history.appendChild(item);
     }
 
-    showResponse(text);
+    show(text);
 }
 
 function speak(text) {
-    try {
-        if (window.Android && Android.speak) {
-            Android.speak(text);
-        } else if ("speechSynthesis" in window) {
-            speechSynthesis.cancel();
-
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = $("language")?.value === "te"
-                ? "te-IN" : "en-IN";
-
-            speechSynthesis.speak(utterance);
-        }
-    } catch (error) {
-        console.log("Speech error:", error);
+    if (window.Android && Android.speak) {
+        Android.speak(text);
+    } else if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = "en-IN";
+        speechSynthesis.speak(utterance);
     }
 }
 
-function stopSpeaking() {
-    if ("speechSynthesis" in window) {
-        speechSynthesis.cancel();
+function native(command) {
+    if (window.Android && Android.sendCommand) {
+        Android.sendCommand(command);
+    } else {
+        show("Android connection unavailable.");
     }
 }
 
 async function askJarvisAI(message) {
-    showResponse("JARVIS is thinking...");
+    show("JARVIS is thinking...");
 
     try {
         const response = await fetch(API_URL, {
@@ -66,51 +52,24 @@ async function askJarvisAI(message) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({
-                message: message
-            })
+            body: JSON.stringify({ message })
         });
 
-        if (!response.ok) {
-            throw new Error("Server error: " + response.status);
-        }
+        if (!response.ok) throw new Error("Server error");
 
         const data = await response.json();
 
-        const reply =
-            data.reply ||
-            data.response ||
-            data.message ||
-            "I could not get a response.";
+        const reply = data.reply || data.response ||
+                      data.message || "No response received.";
 
         addMessage(reply, "JARVIS");
         speak(reply);
 
-        return reply;
-
     } catch (error) {
         console.error(error);
-
-        const message =
-            "AI connection failed. Please check your internet connection.";
-
-        addMessage(message, "JARVIS");
-        speak(message);
-
-        return message;
-    }
-}
-
-function native(command) {
-    try {
-        if (window.Android && Android.sendCommand) {
-            Android.sendCommand(command);
-        } else {
-            showResponse("Android connection unavailable.");
-        }
-    } catch (error) {
-        console.error("Android error:", error);
-        showResponse("Command failed.");
+        const reply = "AI connection failed. Check your internet.";
+        addMessage(reply, "JARVIS");
+        speak(reply);
     }
 }
 
@@ -122,15 +81,17 @@ async function run(command) {
 
     addMessage(text, "YOU");
 
-    if (lower === "hello" || lower === "hi") {
-        const reply = "Hello! I am Jarvis. How can I help you?";
-        addMessage(reply, "JARVIS");
-        speak(reply);
+    if (lower === "hello" || lower === "hi" ||
+        lower === "hello jarvis") {
+        speak("Hello! I am Jarvis. How can I help you?");
         return;
     }
 
     if (lower.includes("stop speaking")) {
-        stopSpeaking();
+        if (window.Android && Android.stopSpeaking) {
+            Android.stopSpeaking();
+        }
+        if ("speechSynthesis" in window) speechSynthesis.cancel();
         return;
     }
 
@@ -159,8 +120,31 @@ async function run(command) {
         return;
     }
 
+    if (lower.startsWith("play ")) {
+        native("play:" + text.substring(5));
+        return;
+    }
+
+    if (lower.startsWith("search ")) {
+        native("search:" + text.substring(7));
+        return;
+    }
+
     if (lower.startsWith("call ")) {
         native("call:" + text.substring(5));
+        return;
+    }
+
+    if (lower.includes("time")) {
+        const now = new Date();
+        const time = now.toLocaleTimeString("en-IN", {
+            hour: "numeric",
+            minute: "2-digit"
+        });
+
+        const reply = "The time is " + time;
+        addMessage(reply, "JARVIS");
+        speak(reply);
         return;
     }
 
@@ -169,11 +153,9 @@ async function run(command) {
 
 function send() {
     const input = $("command");
-
     if (!input) return;
 
     const message = input.value.trim();
-
     if (!message) return;
 
     input.value = "";
@@ -181,47 +163,39 @@ function send() {
 }
 
 function listen() {
-    try {
-        if (window.Android && Android.listen) {
-            Android.listen();
-        } else {
-            showResponse("Voice connection unavailable.");
-        }
-    } catch (error) {
-        console.error(error);
-        showResponse("Could not start voice recognition.");
+    if (window.Android && Android.listen) {
+        Android.listen();
+    } else {
+        show("Microphone connection unavailable.");
     }
 }
 
 function onVoiceResult(text) {
-    if (text) {
-        run(text);
-    }
+    if (text) run(text);
 }
 
 function onVoiceError(error) {
-    showResponse("Voice error: " + error);
+    show("Voice error: " + error);
 }
 
 function changeLanguage() {
     const language = $("language");
 
-    if (language && language.value === "te") {
-        showResponse("జార్విస్ సిద్ధంగా ఉంది. మీ ఆదేశం చెప్పండి.");
-    } else {
-        showResponse("Hello! JARVIS is ready.");
-    }
+    show(language && language.value === "te"
+        ? "జార్విస్ సిద్ధంగా ఉంది."
+        : "JARVIS is ready.");
 }
 
-// Make functions available to HTML
 window.send = send;
 window.listen = listen;
 window.run = run;
 window.onVoiceResult = onVoiceResult;
 window.onVoiceError = onVoiceError;
-window.stopSpeaking = stopSpeaking;
 window.changeLanguage = changeLanguage;
+window.stopSpeaking = function() {
+    if ("speechSynthesis" in window) speechSynthesis.cancel();
+};
 
-document.addEventListener("DOMContentLoaded", function () {
-    console.log("JARVIS AI script loaded.");
+document.addEventListener("DOMContentLoaded", function() {
+    console.log("JARVIS voice system loaded.");
 });
