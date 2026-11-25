@@ -1,11 +1,10 @@
- 
-
-  package com.example.jarvis
+package com.example.jarvis
 
 import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
@@ -14,9 +13,6 @@ import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
 import android.webkit.JavascriptInterface
 import android.widget.Toast
-import android.net.Uri
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import java.util.Locale
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
@@ -24,10 +20,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var webView: WebView
     private var tts: TextToSpeech? = null
 
-    companion object {
-        const val REQUEST_MIC = 101
-        const val REQUEST_SPEECH = 102
-    }
+    private val REQUEST_MIC = 101
+    private val REQUEST_SPEECH = 102
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,44 +46,53 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         @JavascriptInterface
         fun listen() {
-            runOnUiThread { startListening() }
+            runOnUiThread {
+                startListening()
+            }
         }
 
         @JavascriptInterface
         fun startVoice() {
-            runOnUiThread { startListening() }
+            runOnUiThread {
+                startListening()
+            }
         }
 
         @JavascriptInterface
         fun speak(text: String) {
-            runOnUiThread { speakText(text) }
+            runOnUiThread {
+                speakText(text)
+            }
         }
 
         @JavascriptInterface
         fun action(command: String) {
-            runOnUiThread { executeCommand(command) }
+            runOnUiThread {
+                executeCommand(command)
+            }
         }
 
         @JavascriptInterface
         fun execute(command: String) {
-            runOnUiThread { executeCommand(command) }
+            runOnUiThread {
+                executeCommand(command)
+            }
         }
 
         @JavascriptInterface
         fun stopSpeaking() {
-            runOnUiThread { tts?.stop() }
+            runOnUiThread {
+                tts?.stop()
+            }
         }
     }
 
     private fun startListening() {
 
-        if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                this,
+            requestPermissions(
                 arrayOf(Manifest.permission.RECORD_AUDIO),
                 REQUEST_MIC
             )
@@ -97,7 +100,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         try {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            val intent = Intent(
+                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+            )
 
             intent.putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -137,30 +142,35 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         try {
             when {
 
-                cmd.contains("youtube") ->
+                cmd.contains("youtube") -> {
                     openUrl("https://www.youtube.com")
+                }
 
-                cmd.contains("instagram") ->
+                cmd.contains("instagram") -> {
                     openUrl("https://www.instagram.com")
+                }
 
-                cmd.contains("google") ->
+                cmd.contains("google") -> {
                     openUrl("https://www.google.com")
+                }
 
-                cmd.contains("camera") ->
+                cmd.contains("camera") -> {
                     startActivity(
                         Intent("android.media.action.IMAGE_CAPTURE")
                     )
+                }
 
-                cmd.contains("settings") ->
+                cmd.contains("settings") -> {
                     startActivity(
                         Intent(android.provider.Settings.ACTION_SETTINGS)
                     )
+                }
 
                 cmd.startsWith("search:") -> {
                     val query = command.substringAfter(":").trim()
                     openUrl(
                         "https://www.google.com/search?q=" +
-                        Uri.encode(query)
+                            Uri.encode(query)
                     )
                 }
 
@@ -168,12 +178,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     val query = command.substringAfter(":").trim()
                     openUrl(
                         "https://www.youtube.com/results?search_query=" +
-                        Uri.encode(query)
+                            Uri.encode(query)
                     )
                 }
 
                 cmd.startsWith("call:") -> {
                     val number = command.substringAfter(":").trim()
+
                     startActivity(
                         Intent(
                             Intent.ACTION_DIAL,
@@ -182,7 +193,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     )
                 }
 
-                else -> toast("Unknown command: $command")
+                else -> {
+                    toast("Unknown command: $command")
+                }
             }
 
         } catch (e: Exception) {
@@ -191,11 +204,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     private fun openUrl(url: String) {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+        startActivity(
+            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        )
     }
 
     private fun toast(message: String) {
-        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            this,
+            message,
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     @Deprecated("Deprecated Android callback")
@@ -204,9 +223,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         resultCode: Int,
         data: Intent?
     ) {
-        super.onActivityResult(requestCode, resultCode, data)
+        super.onActivityResult(
+            requestCode,
+            resultCode,
+            data
+        )
 
-        if (requestCode == REQUEST_SPEECH && resultCode == RESULT_OK) {
+        if (requestCode == REQUEST_SPEECH &&
+            resultCode == RESULT_OK
+        ) {
 
             val results = data?.getStringArrayListExtra(
                 RecognizerIntent.EXTRA_RESULTS
@@ -221,7 +246,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             webView.evaluateJavascript(
                 "if(typeof onVoiceResult === 'function') " +
-                "onVoiceResult('$safeText');",
+                    "onVoiceResult('$safeText');",
                 null
             )
         }
@@ -239,6 +264,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         )
 
         if (requestCode == REQUEST_MIC) {
+
             if (grantResults.isNotEmpty() &&
                 grantResults[0] == PackageManager.PERMISSION_GRANTED
             ) {
@@ -250,6 +276,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     override fun onInit(status: Int) {
+
         if (status == TextToSpeech.SUCCESS) {
             tts?.language = Locale("en", "IN")
         }
@@ -261,4 +288,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         webView.destroy()
         super.onDestroy()
     }
-}
+} 
+
+  
+
+            
