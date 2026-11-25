@@ -1,15 +1,14 @@
-
 // =====================================
 // JARVIS AI - COMPLETE SCRIPT
 // =====================================
 
 const $ = id => document.getElementById(id);
 
+const API_URL =
+"https://jarvis-ai-1-vfsw.onrender.com/api/chat";
+
 let language = "en";
 let aiBusy = false;
-
-const API_URL =
-    "https://jarvis-ai-1-vfsw.onrender.com/api/chat";
 
 
 // =====================================
@@ -18,79 +17,86 @@ const API_URL =
 
 function changeLanguage() {
 
-    language = $("language").value;
+    const selector = $("language");
+
+    if (!selector) return;
+
+    language = selector.value;
 
     say(
         language === "te"
-            ? "జార్విస్ సిద్ధంగా ఉంది."
-            : "JARVIS is ready."
+        ? "జార్విస్ సిద్ధంగా ఉంది."
+        : "JARVIS is ready."
     );
 }
 
 
 // =====================================
-// CHAT HISTORY
+// HISTORY
 // =====================================
 
 function addHistory(text) {
 
-    const h = $("history");
+    const history = $("history");
 
-    if (!h) return;
+    if (!history) return;
 
-    if (h.textContent === "No activity yet.") {
-        h.textContent = "";
+    if (history.textContent === "No activity yet.") {
+        history.textContent = "";
     }
 
-    h.textContent =
-        text + "\n" + h.textContent;
+    history.textContent =
+        text + "\n" + history.textContent;
 }
 
 
 // =====================================
-// TEXT TO SPEECH
+// SPEECH
 // =====================================
 
 function say(text) {
 
-    $("response").textContent = text;
+    const response = $("response");
+    const status = $("status");
 
-    $("status").textContent = "JARVIS RESPONDING";
+    if (response) response.textContent = text;
+
+    if (status) status.textContent = "JARVIS RESPONDING";
+
+    addHistory("JARVIS: " + text);
 
     if (window.Android && Android.speak) {
 
-        Android.speak(text);
+        Android.speak(String(text));
 
     } else if ("speechSynthesis" in window) {
 
         speechSynthesis.cancel();
 
-        const msg =
+        const message =
             new SpeechSynthesisUtterance(text);
 
-        msg.lang =
+        message.lang =
             language === "te" ? "te-IN" : "en-IN";
 
-        speechSynthesis.speak(msg);
+        speechSynthesis.speak(message);
     }
-
-    addHistory("JARVIS: " + text);
 }
 
 
 // =====================================
-// ANDROID NATIVE COMMANDS
+// ANDROID CONNECTION
 // =====================================
 
 function native(action) {
 
-    if (window.Android && Android.action) {
+    if (window.Android && Android.execute) {
 
-        Android.action(action);
+        Android.execute(action);
 
     } else {
 
-        say("Please use the Android application.");
+        say("Please use the JARVIS Android application.");
     }
 }
 
@@ -108,19 +114,23 @@ async function askJarvisAI(message) {
 
     aiBusy = true;
 
-    $("status").textContent = "THINKING...";
+    const status = $("status");
+    const responseBox = $("response");
 
-    $("response").textContent =
-        "JARVIS is thinking...";
+    if (status) status.textContent = "THINKING...";
+
+    if (responseBox) {
+        responseBox.textContent = "JARVIS is thinking...";
+    }
+
+    const controller = new AbortController();
+
+    const timeout = setTimeout(
+        () => controller.abort(),
+        60000
+    );
 
     try {
-
-        const controller = new AbortController();
-
-        const timeout = setTimeout(
-            () => controller.abort(),
-            60000
-        );
 
         const response = await fetch(API_URL, {
 
@@ -142,21 +152,16 @@ async function askJarvisAI(message) {
 
         });
 
-        clearTimeout(timeout);
-
         const data = await response.json();
 
         if (!response.ok) {
 
             throw new Error(
-                data.error || "Server error: " + response.status
+                data.error || "AI server error"
             );
         }
 
-        const answer =
-            data.reply ||
-            data.response ||
-            data.message;
+        const answer = data.reply;
 
         if (!answer || typeof answer !== "string") {
 
@@ -178,11 +183,13 @@ async function askJarvisAI(message) {
         } else {
 
             say(
-                "Sorry, I cannot connect to my AI brain right now. Please check the server."
+                "Sorry, I cannot connect to my AI server. Please check your internet connection."
             );
         }
 
     } finally {
+
+        clearTimeout(timeout);
 
         aiBusy = false;
     }
@@ -195,7 +202,7 @@ async function askJarvisAI(message) {
 
 function run(command) {
 
-    let c = command.toLowerCase().trim();
+    const c = command.toLowerCase().trim();
 
     if (!c) return;
 
@@ -205,20 +212,16 @@ function run(command) {
     // HELLO
 
     if (
-        if (
-    c === "hello" ||
-    c === "hi" ||
-    c === "హలో" ||
-    c === "నమస్కారం"
-)
-    
-
+        c === "hello" ||
+        c === "hi" ||
+        c.includes("నమస్కారం") ||
+        c.includes("హలో")
     ) {
 
         say(
             language === "te"
-                ? "నమస్కారం! నేను జార్విస్."
-                : "Hello! I am JARVIS."
+            ? "నమస్కారం! నేను జార్విస్."
+            : "Hello! I am JARVIS."
         );
     }
 
@@ -278,8 +281,8 @@ function run(command) {
     // GOOGLE
 
     else if (
-        c.includes("open google") ||
-        c.includes("గూగుల్")
+        c === "open google" ||
+        c === "google"
     ) {
 
         say("Opening Google.");
@@ -300,8 +303,8 @@ function run(command) {
 
         say(
             language === "te"
-                ? "ఇప్పుడు సమయం " + time
-                : "The current time is " + time
+            ? "ఇప్పుడు సమయం " + time
+            : "The current time is " + time
         );
     }
 
@@ -318,8 +321,8 @@ function run(command) {
 
         say(
             language === "te"
-                ? "ఈరోజు తేదీ " + date
-                : "Today's date is " + date
+            ? "ఈరోజు తేదీ " + date
+            : "Today's date is " + date
         );
     }
 
@@ -337,7 +340,7 @@ function run(command) {
     }
 
 
-    // YOUTUBE SEARCH
+    // PLAY MUSIC
 
     else if (c.startsWith("play ")) {
 
@@ -357,9 +360,7 @@ function run(command) {
         const number =
             command.substring(5).trim();
 
-        say(
-            "Opening phone dialer. Please confirm the call."
-        );
+        say("Opening phone dialer.");
 
         native("call:" + number);
     }
@@ -372,30 +373,24 @@ function run(command) {
         c.includes("ఆపు")
     ) {
 
-        if (
-            window.Android &&
-            Android.stopSpeaking
-        ) {
-
-            Android.stopSpeaking();
-
-        } else if ("speechSynthesis" in window) {
-
+        if ("speechSynthesis" in window) {
             speechSynthesis.cancel();
         }
 
-        $("status").textContent = "STOPPED";
-
+        say(
+            language === "te"
+            ? "సరే, ఆపుతున్నాను."
+            : "Okay, stopping."
+        );
     }
 
 
-    // AI CHAT
+    // UNKNOWN COMMAND = AI CHAT
 
     else {
 
         askJarvisAI(command);
     }
-
 }
 
 
@@ -406,6 +401,8 @@ function run(command) {
 function send() {
 
     const input = $("command");
+
+    if (!input) return;
 
     const value = input.value.trim();
 
@@ -424,45 +421,44 @@ function send() {
 
 function listen() {
 
-    $("status").textContent = "LISTENING...";
+    const status = $("status");
 
-    if (
-        window.Android &&
-        Android.listen
-    ) {
+    if (status) status.textContent = "LISTENING...";
 
-        Android.listen();
+    if (window.Android && Android.startVoice) {
+
+        Android.startVoice();
 
     } else {
 
-        say(
-            "Voice input requires the Android application."
-        );
+        say("Voice input requires the Android application.");
     }
 }
 
 
 // =====================================
-// VOICE RESULT
+// ANDROID VOICE CALLBACK
 // =====================================
 
 function onVoiceResult(text) {
 
-    $("command").value = text;
+    const input = $("command");
+
+    if (input) {
+        input.value = text;
+    }
 
     run(text);
 }
 
 
-// =====================================
-// VOICE ERROR
-// =====================================
-
 function onVoiceError(error) {
 
-    $("status").textContent = "VOICE ERROR";
+    const status = $("status");
 
-    say(error);
+    if (status) status.textContent = "VOICE ERROR";
+
+    say(String(error));
 }
 
 
@@ -470,20 +466,26 @@ function onVoiceError(error) {
 // ENTER KEY
 // =====================================
 
-$("command").addEventListener(
-    "keydown",
-    event => {
+document.addEventListener("DOMContentLoaded", () => {
 
-        if (event.key === "Enter") {
+    const input = $("command");
 
-            send();
-        }
+    if (input) {
+
+        input.addEventListener("keydown", event => {
+
+            if (event.key === "Enter") {
+
+                send();
+            }
+        });
     }
-);
+
+});
 
 
 // =====================================
 // JARVIS READY
 // =====================================
 
-console.log("JARVIS AI initialized successfully.");
+console.log("JARVIS AI script loaded successfully.");
