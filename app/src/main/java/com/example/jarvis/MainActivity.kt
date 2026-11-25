@@ -1,4 +1,5 @@
-package com.example.jarvis
+
+      package com.example.jarvis
 
 import android.Manifest
 import android.app.Activity
@@ -6,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.MediaStore
 import android.speech.RecognizerIntent
 import android.speech.tts.TextToSpeech
 import android.webkit.WebView
@@ -14,6 +16,7 @@ import android.webkit.WebChromeClient
 import android.webkit.JavascriptInterface
 import android.widget.Toast
 import java.util.Locale
+import org.json.JSONObject
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
@@ -38,16 +41,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         webView.webViewClient = WebViewClient()
         webView.webChromeClient = WebChromeClient()
 
-        webView.addJavascriptInterface(
-            JarvisBridge(),
-            "Android"
-        )
+        webView.addJavascriptInterface(JarvisBridge(), "Android")
 
         setContentView(webView)
 
-        webView.loadUrl(
-            "file:///android_asset/index.html"
-        )
+        webView.loadUrl("file:///android_asset/index.html")
     }
 
     inner class JarvisBridge {
@@ -81,9 +79,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun startListening() {
 
-        if (checkSelfPermission(
-                Manifest.permission.RECORD_AUDIO
-            ) != PackageManager.PERMISSION_GRANTED
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissions(
                 arrayOf(Manifest.permission.RECORD_AUDIO),
@@ -93,9 +90,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         try {
-            val intent = Intent(
-                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
-            )
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
 
             intent.putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -112,13 +107,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 "Speak to JARVIS"
             )
 
-            startActivityForResult(
-                intent,
-                REQUEST_SPEECH
-            )
+            startActivityForResult(intent, REQUEST_SPEECH)
 
         } catch (e: Exception) {
-            toast("Speech recognition unavailable")
+            toast("Voice recognition unavailable")
         }
     }
 
@@ -129,22 +121,28 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         try {
             when {
 
-                cmd.startsWith("youtube:") -> {
-                    val query = command.substringAfter(":").trim()
+                cmd == "youtube:" || cmd == "open:youtube" -> {
+                    openYouTube("")
+                }
 
-                    openUrl(
-                        "https://www.youtube.com/results?search_query=" +
-                            Uri.encode(query)
-                    )
+                cmd.startsWith("youtube:") -> {
+                    openYouTube(command.substringAfter(":").trim())
+                }
+
+                cmd == "google:" || cmd == "open:google" -> {
+                    openGoogle("")
                 }
 
                 cmd.startsWith("google:") -> {
-                    val query = command.substringAfter(":").trim()
+                    openGoogle(command.substringAfter(":").trim())
+                }
 
-                    openUrl(
-                        "https://www.google.com/search?q=" +
-                            Uri.encode(query)
-                    )
+                cmd.startsWith("play:") -> {
+                    openYouTube(command.substringAfter(":").trim())
+                }
+
+                cmd.startsWith("search:") -> {
+                    openGoogle(command.substringAfter(":").trim())
                 }
 
                 cmd.startsWith("call:") -> {
@@ -158,16 +156,25 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     )
                 }
 
+                cmd == "open:whatsapp" -> {
+                    openApp("com.whatsapp")
+                }
+
+                cmd == "open:camera" -> {
+                    startActivity(
+                        Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                    )
+                }
+
+                cmd == "open:settings" -> {
+                    startActivity(
+                        Intent(android.provider.Settings.ACTION_SETTINGS)
+                    )
+                }
+
                 cmd.startsWith("open:") -> {
                     val site = command.substringAfter(":").trim()
-
-                    openUrl(
-                        if (site.startsWith("http")) {
-                            site
-                        } else {
-                            "https://$site"
-                        }
-                    )
+                    openUrl(site)
                 }
 
                 else -> {
@@ -176,25 +183,75 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
 
         } catch (e: Exception) {
-            toast("Action failed")
+            toast("Could not perform this action")
+        }
+    }
+
+    private fun openYouTube(query: String) {
+
+        if (query.isBlank()) {
+            openAppOrUrl(
+                "com.google.android.youtube",
+                "https://www.youtube.com"
+            )
+        } else {
+            openUrl(
+                "https://www.youtube.com/results?search_query=" +
+                    Uri.encode(query)
+            )
+        }
+    }
+
+    private fun openGoogle(query: String) {
+
+        val url = if (query.isBlank()) {
+            "https://www.google.com"
+        } else {
+            "https://www.google.com/search?q=" + Uri.encode(query)
+        }
+
+        openUrl(url)
+    }
+
+    private fun openApp(packageName: String) {
+
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+
+        if (intent != null) {
+            startActivity(intent)
+        } else {
+            toast("App is not installed")
+        }
+    }
+
+    private fun openAppOrUrl(packageName: String, url: String) {
+
+        val intent = packageManager.getLaunchIntentForPackage(packageName)
+
+        if (intent != null) {
+            startActivity(intent)
+        } else {
+            openUrl(url)
         }
     }
 
     private fun openUrl(url: String) {
+
+        val finalUrl = if (
+            url.startsWith("https://") || url.startsWith("http://")
+        ) {
+            url
+        } else {
+            "https://$url"
+        }
+
         startActivity(
-            Intent(
-                Intent.ACTION_VIEW,
-                Uri.parse(url)
-            )
+            Intent(Intent.ACTION_VIEW, Uri.parse(finalUrl))
         )
     }
 
     private fun toast(message: String) {
-        Toast.makeText(
-            this,
-            message,
-            Toast.LENGTH_SHORT
-        ).show()
+        Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
     @Deprecated("Deprecated Android callback")
@@ -203,15 +260,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         resultCode: Int,
         data: Intent?
     ) {
-        super.onActivityResult(
-            requestCode,
-            resultCode,
-            data
-        )
+        super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == REQUEST_SPEECH &&
-            resultCode == RESULT_OK
-        ) {
+        if (requestCode == REQUEST_SPEECH && resultCode == RESULT_OK) {
 
             val results = data?.getStringArrayListExtra(
                 RecognizerIntent.EXTRA_RESULTS
@@ -219,14 +270,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
             val text = results?.firstOrNull() ?: return
 
-            val safeText = text
-                .replace("\\", "\\\\")
-                .replace("'", "\\'")
-                .replace("\n", " ")
+            val safeText = JSONObject.quote(text)
 
             webView.evaluateJavascript(
                 "if(typeof onVoiceResult === 'function') " +
-                    "onVoiceResult('$safeText');",
+                    "onVoiceResult($safeText);",
                 null
             )
         }
@@ -273,4 +321,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         super.onDestroy()
     }
-}
+}              
+
+            
+            
