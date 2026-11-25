@@ -13,7 +13,6 @@ import android.webkit.WebViewClient
 import android.webkit.WebChromeClient
 import android.webkit.JavascriptInterface
 import android.widget.Toast
-import android.content.Context
 import java.util.Locale
 
 class MainActivity : Activity(), TextToSpeech.OnInitListener {
@@ -21,8 +20,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var webView: WebView
     private var tts: TextToSpeech? = null
 
-    private val REQUEST_MIC = 101
-    private val REQUEST_SPEECH = 102
+    companion object {
+        private const val REQUEST_MIC = 101
+        private const val REQUEST_SPEECH = 102
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,16 +39,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         webView.webChromeClient = WebChromeClient()
 
         webView.addJavascriptInterface(
-            JarvisBridge(this),
+            JarvisBridge(),
             "Android"
         )
 
         setContentView(webView)
 
-        webView.loadUrl("file:///android_asset/index.html")
+        webView.loadUrl(
+            "file:///android_asset/index.html"
+        )
     }
 
-    inner class JarvisBridge(private val context: Context) {
+    inner class JarvisBridge {
 
         @JavascriptInterface
         fun speak(text: String) {
@@ -67,17 +70,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 startListening()
             }
         }
-       @JavascriptInterface
-    fun sendCommand(command: String) {
-        runOnUiThread {
-            this@MainActivity.sendCommand(command)
+
+        @JavascriptInterface
+        fun sendCommand(command: String) {
+            runOnUiThread {
+                this@MainActivity.sendCommand(command)
+            }
         }
-     }
+    }
 
     private fun startListening() {
 
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED
+        if (checkSelfPermission(
+                Manifest.permission.RECORD_AUDIO
+            ) != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissions(
                 arrayOf(Manifest.permission.RECORD_AUDIO),
@@ -106,7 +112,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 "Speak to JARVIS"
             )
 
-            startActivityForResult(intent, REQUEST_SPEECH)
+            startActivityForResult(
+                intent,
+                REQUEST_SPEECH
+            )
 
         } catch (e: Exception) {
             toast("Speech recognition unavailable")
@@ -129,6 +138,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     )
                 }
 
+                cmd.startsWith("google:") -> {
+                    val query = command.substringAfter(":").trim()
+
+                    openUrl(
+                        "https://www.google.com/search?q=" +
+                            Uri.encode(query)
+                    )
+                }
+
                 cmd.startsWith("call:") -> {
                     val number = command.substringAfter(":").trim()
 
@@ -140,21 +158,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     )
                 }
 
-                cmd.startsWith("google:") -> {
-                    val query = command.substringAfter(":").trim()
-
-                    openUrl(
-                        "https://www.google.com/search?q=" +
-                            Uri.encode(query)
-                    )
-                }
-
                 cmd.startsWith("open:") -> {
                     val site = command.substringAfter(":").trim()
 
                     openUrl(
-                        if (site.startsWith("http")) site
-                        else "https://$site"
+                        if (site.startsWith("http")) {
+                            site
+                        } else {
+                            "https://$site"
+                        }
                     )
                 }
 
@@ -170,7 +182,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
     private fun openUrl(url: String) {
         startActivity(
-            Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            Intent(
+                Intent.ACTION_VIEW,
+                Uri.parse(url)
+            )
         )
     }
 
@@ -188,7 +203,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         resultCode: Int,
         data: Intent?
     ) {
-        super.onActivityResult(requestCode, resultCode, data)
+        super.onActivityResult(
+            requestCode,
+            resultCode,
+            data
+        )
 
         if (requestCode == REQUEST_SPEECH &&
             resultCode == RESULT_OK
@@ -244,6 +263,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     }
 
     override fun onDestroy() {
+
         tts?.stop()
         tts?.shutdown()
 
