@@ -4,13 +4,14 @@ function $(id) {
     return document.getElementById(id);
 }
 
-function show(text) {
+// Display messages and activity history
+function addMessage(message, sender) {
     const response = $("response");
-    if (response) response.textContent = text;
-}
-
-function addMessage(text, sender) {
     const history = $("history");
+
+    if (response) {
+        response.textContent = message;
+    }
 
     if (history) {
         if (history.textContent === "No activity yet.") {
@@ -18,33 +19,60 @@ function addMessage(text, sender) {
         }
 
         const item = document.createElement("div");
-        item.textContent = sender + ": " + text;
-        history.appendChild(item);
+        item.textContent = sender.toUpperCase() + ": " + message;
+        history.prepend(item);
     }
-
-    show(text);
 }
 
+// Speak response
 function speak(text) {
-    if (window.Android && Android.speak) {
-        Android.speak(text);
-    } else if ("speechSynthesis" in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = "en-IN";
-        speechSynthesis.speak(utterance);
+    try {
+        if (window.Android && Android.speak) {
+            Android.speak(text);
+        } else if ("speechSynthesis" in window) {
+            speechSynthesis.cancel();
+
+            const voice = new SpeechSynthesisUtterance(text);
+            voice.lang = "en-IN";
+
+            speechSynthesis.speak(voice);
+        }
+    } catch (error) {
+        console.log("Voice error:", error);
     }
 }
 
+// Stop voice
+function stopSpeaking() {
+    try {
+        if (window.Android && Android.stopSpeaking) {
+            Android.stopSpeaking();
+        }
+
+        if ("speechSynthesis" in window) {
+            speechSynthesis.cancel();
+        }
+    } catch (error) {
+        console.log(error);
+    }
+}
+
+// Send command to Android
 function native(command) {
-    if (window.Android && Android.sendCommand) {
-        Android.sendCommand(command);
-    } else {
-        show("Android connection unavailable.");
+    try {
+        if (window.Android && Android.sendCommand) {
+            Android.sendCommand(command);
+        } else {
+            addMessage("Android connection unavailable.", "jarvis");
+        }
+    } catch (error) {
+        addMessage("Action failed.", "jarvis");
     }
 }
 
+// Connect to AI server
 async function askJarvisAI(message) {
-    show("JARVIS is thinking...");
+    addMessage("Thinking...", "jarvis");
 
     try {
         const response = await fetch(API_URL, {
@@ -52,150 +80,228 @@ async function askJarvisAI(message) {
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ message })
+            body: JSON.stringify({
+                message: message
+            })
         });
 
-        if (!response.ok) throw new Error("Server error");
+        if (!response.ok) {
+            throw new Error("Server error: " + response.status);
+        }
 
         const data = await response.json();
 
-        const reply = data.reply || data.response ||
-                      data.message || "No response received.";
+        const reply =
+            data.reply ||
+            data.response ||
+            data.message ||
+            "I couldn't understand.";
 
-        addMessage(reply, "JARVIS");
+        addMessage(reply, "jarvis");
         speak(reply);
+
+        return reply;
 
     } catch (error) {
         console.error(error);
-        const reply = "AI connection failed. Check your internet.";
-        addMessage(reply, "JARVIS");
-        speak(reply);
+
+        const message = "AI connection failed. Please try again.";
+
+        addMessage(message, "jarvis");
+        speak(message);
+
+        return message;
     }
 }
 
+// Main command system
 async function run(command) {
     const text = command.trim();
     const lower = text.toLowerCase();
 
     if (!text) return;
 
-    addMessage(text, "YOU");
+    addMessage(text, "you");
 
-    if (lower === "hello" || lower === "hi" ||
-        lower === "hello jarvis") {
-        speak("Hello! I am Jarvis. How can I help you?");
+    // Greetings
+    if (lower === "hello" || lower === "hi") {
+        const reply = "Hello! I am JARVIS. How can I help you?";
+        addMessage(reply, "jarvis");
+        speak(reply);
         return;
     }
 
+    // Stop voice
     if (lower.includes("stop speaking")) {
-        if (window.Android && Android.stopSpeaking) {
-            Android.stopSpeaking();
-        }
-        if ("speechSynthesis" in window) speechSynthesis.cancel();
+        stopSpeaking();
         return;
     }
 
-    if (lower.includes("open youtube")) {
+    // Time
+    if (lower === "time" || lower.includes("what time")) {
+        const reply = "The time is " +
+            new Date().toLocaleTimeString();
+
+        addMessage(reply, "jarvis");
+        speak(reply);
+        return;
+    }
+
+    // YouTube
+    if (lower === "open youtube") {
         native("youtube:");
         return;
     }
 
-    if (lower.includes("open google")) {
+    // Google
+    if (lower === "open google") {
         native("google:");
         return;
     }
 
-    if (lower.includes("open whatsapp")) {
-        native("open:whatsapp");
-        return;
-    }
-
-    if (lower.includes("open camera")) {
+    // Camera
+    if (lower === "open camera") {
         native("open:camera");
         return;
     }
 
-    if (lower.includes("open settings")) {
+    // Settings
+    if (lower === "open settings") {
         native("open:settings");
         return;
     }
 
+    // Open ANY installed app
+    if (lower.startsWith("open ")) {
+        const appName = text.substring(5).trim();
+
+        if (appName) {
+            native("app:" + appName);
+        }
+
+        return;
+    }
+
+    // Open app using launch or start
+    if (lower.startsWith("launch ")) {
+        const appName = text.substring(7).trim();
+
+        if (appName) {
+            native("app:" + appName);
+        }
+
+        return;
+    }
+
+    if (lower.startsWith("start ")) {
+        const appName = text.substring(6).trim();
+
+        if (appName) {
+            native("app:" + appName);
+        }
+
+        return;
+    }
+
+    // Play on YouTube
     if (lower.startsWith("play ")) {
         native("play:" + text.substring(5));
         return;
     }
 
+    // Google search
     if (lower.startsWith("search ")) {
         native("search:" + text.substring(7));
         return;
     }
 
+    // Phone call
     if (lower.startsWith("call ")) {
         native("call:" + text.substring(5));
         return;
     }
 
-    if (lower.includes("time")) {
-        const now = new Date();
-        const time = now.toLocaleTimeString("en-IN", {
-            hour: "numeric",
-            minute: "2-digit"
-        });
-
-        const reply = "The time is " + time;
-        addMessage(reply, "JARVIS");
-        speak(reply);
-        return;
-    }
-
+    // Ask AI
     await askJarvisAI(text);
 }
 
+// Send typed command
 function send() {
     const input = $("command");
+
     if (!input) return;
 
     const message = input.value.trim();
+
     if (!message) return;
 
     input.value = "";
+
     run(message);
 }
 
+// Activate microphone
 function listen() {
-    if (window.Android && Android.listen) {
-        Android.listen();
-    } else {
-        show("Microphone connection unavailable.");
+    try {
+        if (window.Android && Android.listen) {
+            Android.listen();
+        } else {
+            addMessage("Voice is not available.", "jarvis");
+        }
+    } catch (error) {
+        addMessage("Microphone error.", "jarvis");
     }
 }
 
+// Receive voice command
 function onVoiceResult(text) {
-    if (text) run(text);
+    if (text) {
+        run(text);
+    }
 }
 
+// Voice error
 function onVoiceError(error) {
-    show("Voice error: " + error);
+    addMessage("Voice error: " + error, "jarvis");
 }
 
+// Language selection
 function changeLanguage() {
     const language = $("language");
 
-    show(language && language.value === "te"
-        ? "జార్విస్ సిద్ధంగా ఉంది."
-        : "JARVIS is ready.");
+    if (!language) return;
+
+    const selected = language.value;
+
+    if (selected === "te") {
+        addMessage("తెలుగు ఎంపిక చేయబడింది.", "jarvis");
+    } else {
+        addMessage("English selected.", "jarvis");
+    }
 }
 
+// Make functions available to HTML
 window.send = send;
 window.listen = listen;
 window.run = run;
+window.native = native;
 window.onVoiceResult = onVoiceResult;
 window.onVoiceError = onVoiceError;
 window.changeLanguage = changeLanguage;
-window.stopSpeaking = function() {
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
-};
+window.stopSpeaking = stopSpeaking;
 
-document.addEventListener("DOMContentLoaded", function() {
-    console.log("JARVIS voice system loaded.");
+// Start JARVIS
+document.addEventListener("DOMContentLoaded", function () {
+    const input = $("command");
+
+    if (input) {
+        input.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                send();
+            }
+        });
+    }
+
+    console.log("JARVIS AI started successfully.");
 });
+        
