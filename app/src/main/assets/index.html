@@ -1,170 +1,231 @@
-<!DOCTYPE html>
-<html lang="en">
+
+
+<!DOCTYPE html><html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#061426">
-<title>JARVIS AI V2</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#061426"><title>JARVIS AI V2</title>
+
+<link rel="stylesheet" href="style.css">
+
 <style>
-* { box-sizing: border-box; }
+    * {
+        box-sizing: border-box;
+    }
 
-body {
-    margin: 0;
-    background: radial-gradient(circle, #123c60, #030711);
-    color: #e8faff;
-    font-family: Arial, sans-serif;
-    text-align: center;
-}
+    body {
+        margin: 0;
+        background: radial-gradient(circle, #123c60, #030711);
+        color: #e8faff;
+        font-family: Arial, sans-serif;
+        text-align: center;
+    }
 
-header {
-    padding: 20px;
-    color: #39eaff;
-    letter-spacing: 3px;
-}
+    header {
+        padding: 20px;
+        color: #39eaff;
+        letter-spacing: 3px;
+    }
 
-.container {
-    max-width: 550px;
-    margin: auto;
-    padding: 20px;
-}
+    .container {
+        max-width: 550px;
+        margin: auto;
+        padding: 20px;
+    }
 
-h1 {
-    font-size: 38px;
-    letter-spacing: 8px;
-    text-shadow: 0 0 20px cyan;
-}
+    h1 {
+        font-size: 38px;
+        letter-spacing: 8px;
+        text-shadow: 0 0 20px cyan;
+    }
 
-.reactor {
-    width: 190px;
-    height: 190px;
-    border: 4px solid cyan;
-    border-radius: 50%;
-    margin: 30px auto;
-    display: grid;
-    place-items: center;
-    font-size: 65px;
-    color: cyan;
-    box-shadow: 0 0 35px cyan;
-    animation: pulse 2s infinite;
-}
+    .reactor {
+        width: 190px;
+        height: 190px;
+        border: 4px solid cyan;
+        border-radius: 50%;
+        margin: 30px auto;
+        display: grid;
+        place-items: center;
+        font-size: 65px;
+        color: cyan;
+        box-shadow: 0 0 35px cyan;
+        animation: pulse 2s infinite;
+    }
 
-@keyframes pulse {
-    50% { box-shadow: 0 0 65px cyan; }
-}
+    @keyframes pulse {
+        50% {
+            box-shadow: 0 0 65px cyan;
+        }
+    }
 
-.status {
-    color: #39eaff;
-    margin: 20px;
-}
+    .status {
+        color: #39eaff;
+        margin: 20px;
+    }
 
-button {
-    background: #082c49;
-    border: 1px solid cyan;
-    color: white;
-    padding: 15px;
-    border-radius: 12px;
-    margin: 5px;
-    cursor: pointer;
-}
+    button {
+        background: #082c49;
+        border: 1px solid cyan;
+        color: white;
+        padding: 15px;
+        border-radius: 12px;
+        margin: 5px;
+        cursor: pointer;
+    }
 
-.mic {
-    width: 100%;
-    border-radius: 30px;
-    font-size: 17px;
-}
+    button:active {
+        background: #00cfff;
+        color: #00101a;
+    }
 
-.card {
-    background: #071c30;
-    border: 1px solid #168bff;
-    border-radius: 15px;
-    padding: 18px;
-    margin: 20px 0;
-}
+    .mic {
+        width: 100%;
+        border-radius: 30px;
+        font-size: 17px;
+    }
 
-input, select {
-    background: #061426;
-    color: white;
-    border: 1px solid cyan;
-    padding: 14px;
-    border-radius: 10px;
-    width: 100%;
-    margin-bottom: 10px;
-}
+    .card {
+        background: #071c30;
+        border: 1px solid #168bff;
+        border-radius: 15px;
+        padding: 18px;
+        margin: 20px 0;
+    }
 
-.response {
-    min-height: 50px;
-    line-height: 1.6;
-}
+    input, select {
+        background: #061426;
+        color: white;
+        border: 1px solid cyan;
+        padding: 14px;
+        border-radius: 10px;
+        width: 100%;
+        margin-bottom: 10px;
+    }
 
-.quick {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-}
+    .response {
+        min-height: 50px;
+        line-height: 1.6;
+        overflow-wrap: anywhere;
+    }
 
-.quick button { width: 95%; }
+    .quick {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
 
-#history {
-    text-align: left;
-    font-size: 13px;
-    line-height: 1.8;
-    overflow-wrap: anywhere;
-}
+    .quick button {
+        width: 95%;
+    }
+
+    #history {
+        text-align: left;
+        font-size: 13px;
+        line-height: 1.8;
+        overflow-wrap: anywhere;
+    }
 </style>
-</head>
-<body>
 
-<header>STARK INDUSTRIES | AI SYSTEM</header>
+</head><body><header>STARK INDUSTRIES | AI SYSTEM</header>
 
 <div class="container">
-<h1>J.A.R.V.I.S</h1>
-<p>JUST A RATHER VERY INTELLIGENT SYSTEM</p>
 
-<div class="reactor">◈</div>
+    <h1>J.A.R.V.I.S</h1>
 
-<div class="status" id="status">SYSTEM ONLINE</div>
+    <p>JUST A RATHER VERY INTELLIGENT SYSTEM</p>
 
-<div class="card">
-<h3>LANGUAGE / భాష</h3>
-<select id="language" onchange="changeLanguage()">
-<option value="en">English</option>
-<option value="te">తెలుగు (Telugu)</option>
-</select>
-</div>
+    <div class="reactor">◈</div>
 
-<button class="mic" onclick="listen()">🎙 ACTIVATE JARVIS</button>
+    <div class="status" id="status">
+        SYSTEM ONLINE
+    </div>
 
-<div class="card">
-<h3>COMMAND CENTER</h3>
-<input id="command" type="text" placeholder="Speak or type a command">
-<button onclick="send()">SEND COMMAND</button>
+    <div class="card">
 
-<h3>JARVIS RESPONSE</h3>
-<div class="response" id="response">Hello! JARVIS is ready.</div>
-</div>
+        <h3>LANGUAGE / భాష</h3>
 
-<div class="card">
-<h3>QUICK ACTIONS</h3>
-<div class="quick">
-<button onclick="run('open whatsapp')">WHATSAPP</button>
-<button onclick="run('open youtube')">YOUTUBE</button>
-<button onclick="run('open camera')">CAMERA</button>
-<button onclick="run('open settings')">SETTINGS</button>
-<button onclick="run('open google')">GOOGLE</button>
-<button onclick="run('time')">TIME</button>
-</div>
-</div>
+        <select id="language" onchange="changeLanguage()">
+            <option value="en">English</option>
+            <option value="te">తెలుగు (Telugu)</option>
+        </select>
 
-<div class="card">
-<h3>ACTIVITY HISTORY</h3>
-<div id="history">No activity yet.</div>
-</div>
+    </div>
 
-<p>JARVIS AI V2 | ANDROID EDITION</p>
+    <button class="mic" onclick="listen()">
+        🎙 ACTIVATE JARVIS
+    </button>
+
+    <div class="card">
+
+        <h3>COMMAND CENTER</h3>
+
+        <input
+            id="command"
+            type="text"
+            placeholder="Speak or type a command"
+        >
+
+        <button onclick="send()">
+            SEND COMMAND
+        </button>
+
+        <h3>JARVIS RESPONSE</h3>
+
+        <div class="response" id="response">
+            Hello! JARVIS is ready.
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h3>QUICK ACTIONS</h3>
+
+        <div class="quick">
+
+            <button onclick="run('open whatsapp')">
+                WHATSAPP
+            </button>
+
+            <button onclick="run('open youtube')">
+                YOUTUBE
+            </button>
+
+            <button onclick="run('open camera')">
+                CAMERA
+            </button>
+
+            <button onclick="run('open settings')">
+                SETTINGS
+            </button>
+
+            <button onclick="run('open google')">
+                GOOGLE
+            </button>
+
+            <button onclick="run('time')">
+                TIME
+            </button>
+
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <h3>ACTIVITY HISTORY</h3>
+
+        <div id="history">
+            No activity yet.
+        </div>
+
+    </div>
+
+    <p>JARVIS AI V2 | ANDROID EDITION</p>
+
 </div>
 
 <script src="script.js"></script>
+
 </body>
 </html>
- 
-   
-    
