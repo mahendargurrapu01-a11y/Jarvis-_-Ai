@@ -1,4 +1,3 @@
-
 package com.example.jarvis
 
 import android.Manifest
@@ -34,6 +33,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         tts = TextToSpeech(this, this)
 
         webView = WebView(this)
+
         webView.settings.javaScriptEnabled = true
         webView.settings.domStorageEnabled = true
 
@@ -47,7 +47,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         webView.loadUrl("file:///android_asset/index.html")
     }
 
-    // JavaScript connection
+    // JARVIS JavaScript connection
     inner class JarvisBridge {
 
         @JavascriptInterface
@@ -119,7 +119,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         try {
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            val intent = Intent(
+                RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+            )
 
             intent.putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -218,6 +220,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     val appName = cmd.substringAfter(":").trim()
 
                     when (appName.lowercase(Locale.ROOT)) {
+
                         "camera" -> {
                             startActivity(
                                 Intent(MediaStore.ACTION_IMAGE_CAPTURE)
@@ -226,7 +229,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
                         "settings" -> {
                             startActivity(
-                                Intent(android.provider.Settings.ACTION_SETTINGS)
+                                Intent(
+                                    android.provider.Settings.ACTION_SETTINGS
+                                )
                             )
                         }
 
@@ -246,7 +251,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // Find and open installed apps
+    // Find and open installed applications
     private fun launchInstalledApp(appName: String) {
 
         try {
@@ -287,12 +292,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 return
             }
 
-            val launchIntent = packageManager.getLaunchIntentForPackage(
-                selectedApp.second
-            )
+            val launchIntent =
+                packageManager.getLaunchIntentForPackage(selectedApp.second)
 
             if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 startActivity(launchIntent)
             } else {
                 toast("Cannot open $appName")
@@ -303,7 +306,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // Open external websites
+    // Open websites
     private fun openUrl(url: String) {
         startActivity(
             Intent(Intent.ACTION_VIEW, Uri.parse(url))
@@ -318,7 +321,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         ).show()
     }
 
-    // Voice result
+    // Receive voice commands
     @Deprecated("Deprecated Android callback")
     override fun onActivityResult(
         requestCode: Int,
@@ -327,7 +330,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     ) {
         super.onActivityResult(requestCode, resultCode, data)
 
-        if (requestCode == REQUEST_SPEECH && resultCode == RESULT_OK) {
+        if (requestCode == REQUEST_SPEECH &&
+            resultCode == RESULT_OK
+        ) {
 
             val results = data?.getStringArrayListExtra(
                 RecognizerIntent.EXTRA_RESULTS
@@ -368,15 +373,29 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
     }
 
-    // Text to speech
+    // JARVIS voice configuration
     override fun onInit(status: Int) {
 
         if (status == TextToSpeech.SUCCESS) {
-            tts?.language = Locale("en", "IN")
+
+            tts?.let { engine ->
+
+                val result = engine.setLanguage(
+                    Locale("en", "IN")
+                )
+
+                if (result >= TextToSpeech.LANG_AVAILABLE) {
+
+                    // Lower-pitched JARVIS voice
+                    engine.setSpeechRate(0.90f)
+                    engine.setPitch(0.85f)
+                }
+            }
         }
     }
 
     override fun onDestroy() {
+
         tts?.stop()
         tts?.shutdown()
 
